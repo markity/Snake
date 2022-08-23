@@ -4,6 +4,7 @@
 #include <thread>
 #include <mutex>
 #include <cstdlib>
+#include <cstring>
 
 // 头 <- 身子 <- 身子
 // 蛇身或尾巴(吃蛋的时候可能发生)碰到墙壁都会狗带
@@ -13,25 +14,20 @@ class SnakeNode
 public:
     SnakeNode(int y_, int x_) : y(y_), x(x_) {}
     virtual void update() = 0;
-    std::pair<int, int> getPosition() const
-    {
-        return std::pair<int, int>(y, x);
-    }
     int y, x;
 };
 
 class SnakeBodyNode final : public SnakeNode
 {
 public:
-    SnakeBodyNode(int y_, int x_, SnakeNode *tail_) : SnakeNode(y_, x_), tail(tail_) {}
-    // 蛇身继承上下一级对象的位置
+    SnakeBodyNode(int y_, int x_, SnakeNode *before_) : SnakeNode(y_, x_), before(before_) {}
+    // 蛇身节点: 继承上下一级对象的位置
     void update() override
     {
-        auto nextPos = this->tail->getPosition();
-        this->y = tail->y;
-        this->x = tail->x;
+        this->y = before->y;
+        this->x = before->x;
     }
-    SnakeNode *tail;
+    SnakeNode *before;
 };
 
 class SnakeHeadNode final : public SnakeNode
@@ -245,6 +241,7 @@ public:
     {
         nodesLock.lock();
         auto head = dynamic_cast<SnakeHeadNode *>(nodes.front());
+        
         if (direction == 'w' && head->direction != 's')
         {
             head->direction = 'w';
@@ -308,21 +305,26 @@ int main()
         {
         case KEY_UP:
         case 'w':
+        case 'W':
             s.changeDirection('w');
             break;
         case KEY_DOWN:
         case 's':
+        case 'S':
             s.changeDirection('s');
             break;
         case KEY_LEFT:
         case 'a':
+        case 'A':
             s.changeDirection('a');
             break;
         case KEY_RIGHT:
         case 'd':
+        case 'D':
             s.changeDirection('d');
             break;
         case 'q':
+        case 'Q':
             goto end;
             break;
         }
