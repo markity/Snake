@@ -5,6 +5,7 @@
 #include <mutex>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 constexpr int N_FOOD = 3;            // 蛇蛋数目
 constexpr int N_BODY_INIT = 6;       // 起始的蛇身长度
@@ -103,16 +104,25 @@ public:
         }
 
         // 初始化蛇蛋 3个
-        for (size_t i = 0; i < 3; i++)
+        for (size_t i = 0; i < N_FOOD; i++)
         {
             int y, x;
             while (1)
             {
                 y = rand() % win->_maxy;
                 x = rand() % win->_maxx;
+                // 不与节点冲突
                 for (auto &i : nodes)
                 {
                     if (i->y == y && i->x == x)
+                    {
+                        continue;
+                    }
+                }
+                // 不与之前的蛋冲突
+                for (auto &i : eggs)
+                {
+                    if (i.first == y && i.second == x)
                     {
                         continue;
                     }
@@ -150,7 +160,7 @@ public:
                                 if((*b)->y > LINES-1 || (*b)->y < 0  || (*b)->x > COLS-1 || (*b)->x < 0) {
                                     nodesLock.unlock();
                                     wclear(win);
-                                    wprintw(win, "Game over2!");
+                                    wprintw(win, "Game over!");
                                     wrefresh(win);
                                     return;
                                 }
@@ -171,9 +181,19 @@ public:
                                             while(1) {
                                                 y = rand() % win->_maxy;
                                                 x = rand() % win->_maxx;
+                                                // 不与节点冲突
                                                 for (auto &i : nodes)
                                                 {
-                                                    if(i->y == y && i->x == x) {
+                                                    if (i->y == y && i->x == x)
+                                                    {
+                                                        continue;
+                                                    }
+                                                }
+                                                // 不与之前的蛋冲突
+                                                for (auto &i : eggs)
+                                                {
+                                                    if (i.first == y && i.second == x)
+                                                    {
                                                         continue;
                                                     }
                                                 }
@@ -286,6 +306,7 @@ int main()
     noecho();
     raw();
     curs_set(0);
+    srand(unsigned(time(NULL)));
 
     // 检查窗口大小是否合适
     if (LINES < MIN_HEIGHT || COLS < MIN_WIDTH)
