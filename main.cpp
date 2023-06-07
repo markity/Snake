@@ -2,16 +2,18 @@
 #include <list>
 #include <functional>
 #include <thread>
+#include <vector>
 #include <mutex>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 
-constexpr int N_FOOD = 3;            // 蛇蛋数目
+constexpr int N_FOOD = 5;            // 蛇蛋数目
 constexpr int N_BODY_INIT = 6;       // 起始的蛇身长度
 constexpr int MIN_HEIGHT = 10;       // 窗口最小的高度
 constexpr int MIN_WIDTH = 10;        // 矿口最小的宽度
-constexpr int UPDATE_INTERVAL = 125; // 定时器时间, 单位ms, 更新蛇的位置
+constexpr int UPDATE_INTERVAL = 100; // 定时器时间, 单位ms, 更新蛇的位置
+constexpr int UPDATE_INTERVAL_MIN = 50;
 
 // 头 <- 身子 <- 身子
 // 蛇身或尾巴(吃蛋的时候可能发生)碰到墙壁都会狗带
@@ -134,9 +136,8 @@ public:
     };
 
     // 每隔一段事件, 调用定时器, 非阻塞
-    void run(int interval)
+    void run()
     {
-        static int inter = interval;
         std::thread([&]()
                     {
                         while (1)
@@ -156,13 +157,26 @@ public:
                             auto head = *nodes.begin();
                             for (auto b = nodes.begin(), e = nodes.end(); b != e; b++)
                             {
-                                // 检查是否触碰边界
-                                if((*b)->y > LINES-1 || (*b)->y < 0  || (*b)->x > COLS-1 || (*b)->x < 0) {
-                                    nodesLock.unlock();
-                                    wclear(win);
-                                    wprintw(win, "Game over!");
-                                    wrefresh(win);
-                                    return;
+                                // // 检查是否触碰边界
+                                // if((*b)->y > LINES-1 || (*b)->y < 0  || (*b)->x > COLS-1 || (*b)->x < 0) {
+                                //     nodesLock.unlock();
+                                //     wclear(win);
+                                //     wprintw(win, "Game over!");
+                                //     wrefresh(win);
+                                //     return;
+                                // }
+
+                                if ((*b)->y > LINES-1) {
+                                    (*b)->y = 0;
+                                }
+                                if ((*b)->y < 0) {
+                                    (*b)->y = LINES - 1;
+                                }
+                                if ((*b)->x < 0) {
+                                    (*b)->x = COLS - 1;
+                                }
+                                if ((*b)->x > COLS-1) {
+                                    (*b)->x = 0;
                                 }
 
                                 move((*b)->y, (*b)->x);
@@ -247,7 +261,11 @@ public:
                             wrefresh(win);
 
                             // 休息
-                            std::this_thread::sleep_for(std::chrono::milliseconds(inter));
+                            if (!fast) {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL));
+                            } else {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL_MIN));
+                            }
 
                             // 更新下一帧的链表数据
                             nodesLock.lock();
@@ -283,6 +301,12 @@ public:
         nodesLock.unlock();
     }
 
+    void changeSpeed() {
+        nodesLock.lock();
+        fast = !fast;
+        nodesLock.unlock();
+    }
+
     ~Snake()
     {
         for (auto &i : nodes)
@@ -297,6 +321,7 @@ public:
     std::list<SnakeNode *> nodes;
 
     std::vector<std::pair<int, int>> eggs;
+    bool fast = false;
 };
 
 int main()
@@ -319,7 +344,7 @@ int main()
     Snake s(main_win, LINES / 2, COLS / 2, 'd', N_BODY_INIT);
 
     // refresh只由run里面创建的线程调用, 对绘图库线程安全
-    s.run(UPDATE_INTERVAL);
+    s.run();
 
     // 主线程负责监听键盘事件
     keypad(main_win, TRUE);
@@ -353,6 +378,8 @@ int main()
         case 'Q':
             goto end;
             break;
+        case 32:
+            s.changeSpeed();
         }
     }
 
