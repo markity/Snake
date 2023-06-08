@@ -260,11 +260,24 @@ public:
                             nodesLock.unlock();
                             wrefresh(win);
 
-                            // 休息
-                            if (!fast) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL));
-                            } else {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL_MIN));
+
+                            while (1) {
+                                nodesLock.lock();
+                                auto f = fast;
+                                auto s = stop;
+                                nodesLock.unlock();
+
+                                // 休息
+                                if (!f) {
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL));
+                                } else {
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL_MIN));
+                                }
+
+                                if (s) {
+                                    continue;
+                                }
+                                break;
                             }
 
                             // 更新下一帧的链表数据
@@ -301,6 +314,12 @@ public:
         nodesLock.unlock();
     }
 
+    void stopOrStart() {
+        nodesLock.lock();
+        stop = !stop;
+        nodesLock.unlock();
+    }
+
     void changeSpeed() {
         nodesLock.lock();
         fast = !fast;
@@ -322,6 +341,7 @@ public:
 
     std::vector<std::pair<int, int>> eggs;
     bool fast = false;
+    bool stop = false;
 };
 
 int main()
@@ -377,6 +397,10 @@ int main()
         case 'q':
         case 'Q':
             goto end;
+            break;
+        case 'p':
+        case 'P':
+            s.stopOrStart();
             break;
         case 32:
             s.changeSpeed();
